@@ -14,16 +14,21 @@ export default function Profile() {
     email: currentUser?.email || "",
     password: "",
   });
+
   const [loading, setLoading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [updateError, setUpdateError] = useState(null);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
 
-  // 🔹 Handle image upload to Cloudinary + update backend immediately
+  // 🔹 Handle image upload
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setFile(file);
     setLoading(true);
     setUploadError(null);
+    setUploadSuccess(false);
 
     const data = new FormData();
     data.append("file", file);
@@ -31,33 +36,46 @@ export default function Profile() {
     data.append("cloud_name", "djhjrkgfv");
 
     try {
-      // 1️⃣ Upload image to Cloudinary
-      const res = await fetch("https://api.cloudinary.com/v1_1/djhjrkgfv/image/upload", {
-        method: "POST",
-        body: data,
-      });
-      const uploadResult = await res.json();
-      if (!uploadResult.url) throw new Error("Upload failed");
+      // 1️⃣ Upload to Cloudinary
+      const cloudinaryRes = await fetch(
+        "https://api.cloudinary.com/v1_1/djhjrkgfv/image/upload",
+        {
+          method: "POST",
+          body: data,
+        }
+      );
+
+      if (!cloudinaryRes.ok) {
+        const errorText = await cloudinaryRes.text();
+        throw new Error(`Cloudinary Error: ${errorText}`);
+      }
+
+      const uploadResult = await cloudinaryRes.json();
+      if (!uploadResult.url) throw new Error("Image URL not returned from Cloudinary");
+
       const newAvatarUrl = uploadResult.url;
       setAvatar(newAvatarUrl);
 
-      // 2️⃣ Immediately update backend (MongoDB)
-      const updateRes = await fetch(`/api/user/update/${currentUser._id}`, {
+      // 2️⃣ Update backend
+      const backendRes = await fetch(`/api/user/update/${currentUser._id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ avatar: newAvatarUrl }),
       });
 
-      const updatedUser = await updateRes.json();
-      if (!updateRes.ok) throw new Error(updatedUser.message || "Failed to update user");
+      const updatedUser = await backendRes.json();
+      if (!backendRes.ok) {
+        throw new Error(updatedUser.message || "Failed to update user in backend.");
+      }
 
-      // 3️⃣ Update Redux + Persisted State
+      // 3️⃣ Redux update
       dispatch(updateUserSuccess(updatedUser));
-
-      console.log("✅ Avatar updated successfully:", updatedUser);
+      setUploadSuccess(true);
+      setUploadError(null);
     } catch (err) {
       console.error("❌ Upload or update failed:", err);
-      setUploadError("Failed to upload/update image.");
+      setUploadError(err.message || "Something went wrong while uploading.");
+      setUploadSuccess(false);
     } finally {
       setLoading(false);
     }
@@ -74,8 +92,11 @@ export default function Profile() {
   // 🔹 Handle profile update (username, email, etc.)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setUpdateError(null);
+    setUpdateSuccess(false);
+
     try {
-      setLoading(true);
       const res = await fetch(`/api/user/update/${currentUser._id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,9 +107,11 @@ export default function Profile() {
       if (!res.ok) throw new Error(updatedUser.message || "Update failed");
 
       dispatch(updateUserSuccess(updatedUser));
-      alert("Profile updated successfully!");
+      setUpdateSuccess(true);
+      setUpdateError(null);
     } catch (err) {
-      alert(err.message);
+      console.error("❌ Update failed:", err);
+      setUpdateError(err.message || "Profile update failed.");
     } finally {
       setLoading(false);
     }
@@ -114,13 +137,20 @@ export default function Profile() {
           alt="profile"
         />
 
+        {/* 🔹 Image Upload Feedback */}
         {loading && (
-          <p className="text-sm text-green-700 text-center">Uploading...</p>
+          <p className="text-sm text-blue-600 text-center">Uploading image...</p>
         )}
-        {uploadError && (
-          <p className="text-sm text-red-500 text-center">{uploadError}</p>
+        {uploadSuccess && !loading && (
+          <p className="text-sm text-green-600 text-center">
+            ✅ Image uploaded successfully!
+          </p>
+        )}
+        {uploadError && !loading && (
+          <p className="text-sm text-red-600 text-center">❌ {uploadError}</p>
         )}
 
+        {/* 🔹 Profile Input Fields */}
         <input
           type="text"
           placeholder="Username"
@@ -146,12 +176,23 @@ export default function Profile() {
           onChange={handleChange}
         />
 
+        {/* 🔹 Submit Button */}
         <button
           disabled={loading}
           className="bg-slate-700 text-white rounded-lg p-3 uppercase hover:opacity-95 disabled:opacity-80"
         >
-          {loading ? "Updating..." : "Update"}
+          {loading ? "Loading..." : "Update"}
         </button>
+
+        {/* 🔹 Profile Update Feedback */}
+        {updateSuccess && !loading && (
+          <p className="text-sm text-green-600 text-center mt-2">
+            ✅ Profile updated successfully!
+          </p>
+        )}
+        {updateError && !loading && (
+          <p className="text-sm text-red-600 text-center mt-2">❌ {updateError}</p>
+        )}
       </form>
 
       <div className="flex justify-between mt-5">
