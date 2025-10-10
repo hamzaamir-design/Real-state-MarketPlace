@@ -28,7 +28,7 @@ import("./routes/cloudinary.route.js")
   })
   .catch((err) => console.error("❌ Failed to load Cloudinary route:", err));
 
-app.use("/api/user", userRouter);
+app.use("/api/users", userRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/listing", listingRouter);
 

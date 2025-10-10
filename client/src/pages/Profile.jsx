@@ -2,6 +2,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useRef, useState } from "react";
 import { updateUserSuccess, deleteUserFailure, deleteUserStart, deleteUserSuccess, signOutUserStart, signOutUserSuccess, signOutUserFailure } from "../redux/user/userSlice";
 import { Link } from "react-router-dom";
+import { set } from "mongoose";
 
 
 export default function Profile() {
@@ -17,8 +18,11 @@ export default function Profile() {
     password: "",
   });
 
+  const [showListingError, setShowListingError] = useState(false);
+  const [userListings, setUserListings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+
 
   // 🔹 Handle file upload to Cloudinary
   const handleFileUpload = async (e) => {
@@ -101,7 +105,7 @@ export default function Profile() {
     }
   };
 
-  const handleDeleteUser = async () => { 
+  const handleDeleteUser = async () => {
     try {
       dispatch(deleteUserStart());
       const res = await fetch(`/api/user/delete/${currentUser._id}`, {
@@ -118,7 +122,7 @@ export default function Profile() {
     }
   }
 
-  const handleSignOut = async () => { 
+  const handleSignOut = async () => {
     try {
       dispatch(signOutUserStart());
       const res = await fetch('/api/auth/signout');
@@ -130,6 +134,22 @@ export default function Profile() {
       dispatch(signOutUserSuccess(data));
     } catch (error) {
       dispatch(signOutUserFailure(data.message));
+    }
+  }
+
+  const handleShowListings = async () => {
+    try {
+      setShowListingError(false);
+      const res = await fetch(`/api/users/listings/${currentUser._id}`);
+      const data = await res.json();
+      if (data.success === false) {
+        setShowListingError(true);
+        return;
+      }
+      setUserListings(data);
+    } catch (error) {
+      setShowListingError(true);
+
     }
   }
   return (
@@ -165,11 +185,10 @@ export default function Profile() {
         {loading && <p className="text-blue-600 text-center">Uploading...</p>}
         {message.text && (
           <p
-            className={`text-center text-sm ${
-              message.type === "error"
-                ? "text-red-600"
-                : "text-green-600 font-medium"
-            }`}
+            className={`text-center text-sm ${message.type === "error"
+              ? "text-red-600"
+              : "text-green-600 font-medium"
+              }`}
           >
             {message.text}
           </p>
@@ -215,9 +234,30 @@ export default function Profile() {
       </form>
 
       <div className="flex justify-between mt-6 text-sm">
-        <span onClick={ handleDeleteUser} className="text-red-700 cursor-pointer">Delete account</span>
+        <span onClick={handleDeleteUser} className="text-red-700 cursor-pointer">Delete account</span>
         <span onClick={handleSignOut} className="text-red-700 cursor-pointer">Sign out</span>
       </div>
+      <button onClick={handleShowListings} className="text-green-700 w-full">Show Listings</button>
+      <p className="text-red-700 mt-5">{showListingError ? "Error showing listings" : ""}</p>
+      {userListings && userListings.length > 0 &&
+        <div className="flex flex-col gap-4">
+          <h1 className="text-center mt-7 text-2xl font-semibold">Your Listings</h1>
+          {userListings.map((listing) => (
+            <div key={listing._id} className="border p-3 rounded-lg flex justify-between items-center gap-4">
+              <Link to={`/listing/${listing._id}`}>
+                <img src={listing.imageUrls[0]} alt="listing cover" className="h-16 w-16 object-contain " />
+              </Link>
+              <Link className="text-slate-700 font-semibold hover:underline truncate flex-1" to={`/listing/${listing._id}`}>
+                <p>{listing.name}</p>
+              </Link>
+              <div className="flex flex-col items-center">
+                <button className="text-red-700 uppercase">Delete</button>
+                <button className="text-green-700 uppercase">Edit</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      }
     </div>
   );
 }
