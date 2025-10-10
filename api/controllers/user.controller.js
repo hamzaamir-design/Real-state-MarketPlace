@@ -1,15 +1,16 @@
+import Listing from "../models/listing.model.js";
 import User from "../models/user.model.js";
 import { errorHandler } from "../utils/error.js";
 import bcryptjs from "bcryptjs";
 
 export const updateUser = async (req, res, next) => {
- 
+
   if (req.user.id !== req.params.id) {
     return next(errorHandler(403, "You are not allowed to update this user!"));
   }
 
   try {
-   
+
     let updatedFields = {
       username: req.body.username,
       email: req.body.email,
@@ -52,5 +53,18 @@ export const deleteUser = async (req, res, next) => {
     res.status(200).json({ message: "User has been deleted." });
   } catch (error) {
     next(error)
+  }
+}
+
+export const getUserListings = async (req, res, next) => {
+  if (req.user.id === req.params.id) {
+    try {
+      const listings = await Listing.find({ userId: req.params.id });
+      return res.status(200).json(listings);
+    } catch (error) {
+      next(error)
+    }
+  } else {
+    return next(errorHandler(401, "You are not allowed to view this user's listings!"));
   }
 }
