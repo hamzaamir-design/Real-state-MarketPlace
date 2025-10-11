@@ -142,7 +142,7 @@ export default function Profile() {
       setShowListingError(false);
       const res = await fetch(`/api/users/listings/${currentUser._id}`);
       console.log(currentUser._id);
-      
+
 
       const data = await res.json();
       if (data.success === false) {
@@ -162,10 +162,10 @@ export default function Profile() {
         method: "DELETE",
         credentials: "include",
       });
-    
-  
+
+
       if (!res.ok) {
-        const text = await res.text(); 
+        const text = await res.text();
         console.error("Delete failed:", res.status, text);
         return;
       }
@@ -288,9 +288,11 @@ export default function Profile() {
               <Link className="text-slate-700 font-semibold hover:underline truncate flex-1" to={`/listing/${listing._id}`}>
                 <p>{listing.name}</p>
               </Link>
-              <div onClick={() => handleListingDelete(listing._id)} className="flex flex-col items-center">
-                <button className="text-red-700 uppercase">Delete</button>
-                <button className="text-green-700 uppercase">Edit</button>
+              <div  className="flex flex-col items-center">
+                <button onClick={() => handleListingDelete(listing._id)} className="text-red-700 uppercase">Delete</button>
+                <Link to={`/update-listing/${listing._id}`}>
+                  <button className="text-green-700 uppercase">Edit</button>
+                </Link>
               </div>
             </div>
           ))}
