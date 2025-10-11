@@ -141,6 +141,9 @@ export default function Profile() {
     try {
       setShowListingError(false);
       const res = await fetch(`/api/users/listings/${currentUser._id}`);
+      console.log(currentUser._id);
+      
+
       const data = await res.json();
       if (data.success === false) {
         setShowListingError(true);
@@ -152,6 +155,41 @@ export default function Profile() {
 
     }
   }
+
+  const handleListingDelete = async (listingId) => {
+    try {
+      const res = await fetch(`/api/listing/delete/${listingId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+    
+  
+      if (!res.ok) {
+        const text = await res.text(); 
+        console.error("Delete failed:", res.status, text);
+        return;
+      }
+
+      const data = await res.json();
+
+      // Make sure backend actually sent success:true
+      if (!data.success) {
+        console.error("Backend error:", data.message || "Unknown error");
+        return;
+      }
+
+      // ✅ Update the local UI state
+      setUserListings((prev) =>
+        prev.filter((listing) => listing._id !== listingId)
+      );
+
+      console.log("✅ Listing deleted successfully!");
+    } catch (error) {
+      console.error("❌ Request failed:", error.message);
+    }
+  };
+
+
   return (
     <div className="p-6 max-w-lg mx-auto bg-white rounded-2xl shadow-md">
       <h1 className="text-3xl font-semibold text-center mb-8">Profile</h1>
@@ -250,7 +288,7 @@ export default function Profile() {
               <Link className="text-slate-700 font-semibold hover:underline truncate flex-1" to={`/listing/${listing._id}`}>
                 <p>{listing.name}</p>
               </Link>
-              <div className="flex flex-col items-center">
+              <div onClick={() => handleListingDelete(listing._id)} className="flex flex-col items-center">
                 <button className="text-red-700 uppercase">Delete</button>
                 <button className="text-green-700 uppercase">Edit</button>
               </div>
