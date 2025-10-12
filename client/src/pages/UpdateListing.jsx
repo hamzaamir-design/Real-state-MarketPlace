@@ -68,17 +68,36 @@ export default function CreateListing() {
 
   useEffect(() => {
     const fetchListing = async () => {
-      const listingId = params.listingId;
-      const res = await fetch(`/api/listing/get/${listingId}`);
-      const data = await res.json();
-      if (data.success === false) {
-        console.log[data.message];
-        return;
+      try {
+        const listingId = params.listingId;
+        const res = await fetch(`/api/listing/get/${listingId}`);
+        const data = await res.json();
+
+        if (!res.ok || data.success === false) {
+          console.error("❌ Failed to fetch listing:", data.message);
+          return;
+        }
+
+        // If backend returns data directly, not nested inside "data"
+        const listingData = data.data || data;
+
+        // Validate it has expected structure
+        if (!listingData.name) {
+          console.warn("⚠️ Listing data missing expected fields:", listingData);
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          ...listingData,
+        }));
+      } catch (err) {
+        console.error("❌ Fetch listing error:", err);
       }
-      setFormData(data.data);
-    }
+    };
+
     fetchListing();
-  }, []);
+  }, [params.listingId]);
+
 
   // 🖼️ Upload selected images
   const handleImageSubmit = async (e) => {
