@@ -8,6 +8,7 @@ import cookieParser from "cookie-parser";
 import userRouter from "./routes/user.routes.js";
 import authRouter from "./routes/auth.route.js";
 import listingRouter from "./routes/listing.route.js";
+import path from "path";
 
 const app = express();
 app.use(express.json());
@@ -18,6 +19,8 @@ mongoose
   .connect(process.env.MONGO)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
+
+  const __dirname = path.resolve();
 
 // ✅ Dynamically import Cloudinary route AFTER envs are loaded
 import("./routes/cloudinary.route.js")
@@ -31,6 +34,10 @@ import("./routes/cloudinary.route.js")
 app.use("/api/users", userRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/listing", listingRouter);
+app.use(express.static(path.join(__dirname, "/client/dist")));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "client",'dist','index.html'));
+});
 
 app.listen(3000, () => {
   console.log("🚀 Server is running on port 3000");
