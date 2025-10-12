@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function CreateListing() {
   const [files, setFiles] = useState([]);
@@ -8,6 +8,7 @@ export default function CreateListing() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     imageUrls: [],
     name: "",
@@ -23,16 +24,14 @@ export default function CreateListing() {
     furnished: false,
   });
 
+  // ✅ Get user from Redux
   const { currentUser } = useSelector((state) => state.user);
 
-  // 🧠 Handle input change
+  // 🧠 Handle input changes
   const handleChange = (e) => {
     const { id, value, type, checked } = e.target;
     if (id === "sale" || id === "rent") {
-      setFormData((prev) => ({
-        ...prev,
-        type: id,
-      }));
+      setFormData((prev) => ({ ...prev, type: id }));
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -41,7 +40,7 @@ export default function CreateListing() {
     }
   };
 
-  // ☁️ Upload image to Cloudinary
+  // ☁️ Upload single image to Cloudinary
   const storeImage = async (file) => {
     const data = new FormData();
     data.append("file", file);
@@ -50,21 +49,15 @@ export default function CreateListing() {
 
     const res = await fetch(
       `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
-      {
-        method: "POST",
-        body: data,
-      }
+      { method: "POST", body: data }
     );
 
     const json = await res.json();
-    if (!res.ok) {
-      console.error("Cloudinary Upload Error:", json);
-      throw new Error("Upload failed");
-    }
+    if (!res.ok) throw new Error(json.error?.message || "Upload failed");
     return json.secure_url;
   };
 
-  // 🖼️ Upload selected images
+  // 🖼️ Handle multiple image uploads
   const handleImageSubmit = async (e) => {
     e.preventDefault();
 
@@ -105,7 +98,20 @@ export default function CreateListing() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!currentUser?._id) return setMessage("⚠️ Please log in first.");
+    console.log("🧾 currentUser:", currentUser);
+
+    // ✅ Defensive checks
+    if (!currentUser) {
+      return setMessage("⚠️ Please log in before creating a listing.");
+    }
+
+    // Your backend might send "id" instead of "_id"
+    const userId = currentUser._id || currentUser.id;
+    if (!userId) {
+      console.error("Missing user ID in currentUser:", currentUser);
+      return setMessage("❌ Cannot find your user ID. Try logging in again.");
+    }
+
     if (formData.imageUrls.length === 0)
       return setMessage("⚠️ Please upload at least one image.");
     if (+formData.discountPrice >= +formData.regularPrice)
@@ -120,7 +126,7 @@ export default function CreateListing() {
         credentials: "include",
         body: JSON.stringify({
           ...formData,
-          userRef: currentUser._id,
+          userRef: userId,
         }),
       });
 
@@ -129,7 +135,6 @@ export default function CreateListing() {
 
       setMessage("✅ Listing created successfully!");
       console.log("📦 Created listing:", data);
-      console.log(formData);
 
       // Reset form
       setFormData({
@@ -146,7 +151,16 @@ export default function CreateListing() {
         parking: false,
         furnished: false,
       });
-      navigate(`/listing/${data.data._id}`);
+
+      // ✅ Safe navigation (check path)
+      if (data?.data?._id) {
+        navigate(`/listing/${data.data._id}`);
+      } else if (data?._id) {
+        navigate(`/listing/${data._id}`);
+      } else {
+        console.warn("No listing ID returned:", data);
+        navigate("/profile");
+      }
     } catch (err) {
       console.error("❌ Error creating listing:", err);
       setMessage("❌ " + err.message);
@@ -162,7 +176,7 @@ export default function CreateListing() {
       </h1>
 
       <form className="flex flex-col sm:flex-row gap-6" onSubmit={handleSubmit}>
-        {/* Left Section */}
+        {/* LEFT SECTION */}
         <div className="flex flex-col gap-4 flex-1">
           <input
             type="text"
@@ -232,7 +246,7 @@ export default function CreateListing() {
             ))}
           </div>
 
-          {/* Numbers */}
+          {/* Numeric inputs */}
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <input
@@ -283,7 +297,7 @@ export default function CreateListing() {
           </div>
         </div>
 
-        {/* Right Section */}
+        {/* RIGHT SECTION */}
         <div className="flex flex-col flex-1 gap-4">
           <p className="font-semibold text-gray-700">
             Images
