@@ -180,7 +180,11 @@ export default function CreateListing() {
         parking: false,
         furnished: false,
       });
-      navigate(`/listing/${data.data._id}`);
+      const listingId = data?.data?._id || data?._id;
+      if (!listingId) throw new Error("Invalid listing ID returned from backend");
+
+      navigate(`/listing/${listingId}`);
+
     } catch (err) {
       console.error("❌ Error creating listing:", err);
       setMessage("❌ " + err.message);
